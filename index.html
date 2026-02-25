@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Conector de Artículos en Tiempo Real</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --card: #1f2937;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #60a5fa;
+        --accent-2: #34d399;
+        --danger: #f87171;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at top, #1e293b, var(--bg) 60%);
+        min-height: 100vh;
+      }
+      .app {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 3vw, 2.3rem);
+      }
+      .subtitle {
+        color: var(--muted);
+        margin-top: 0.45rem;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel), transparent 8%);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 14px;
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(120px, 1fr));
+        gap: 0.7rem;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      .field label {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+      input,
+      button,
+      select {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: #0b1220;
+        color: var(--text);
+        padding: 0.65rem 0.75rem;
+        font-size: 0.95rem;
+      }
+      button {
+        align-self: end;
+        cursor: pointer;
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        border: none;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+      .article-card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+      .article-card h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+      .meta {
+        margin-top: 0.45rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .timeline {
+        margin-top: 0.8rem;
+        border-left: 2px solid rgba(96, 165, 250, 0.4);
+        padding-left: 0.9rem;
+      }
+      .timeline-item {
+        position: relative;
+        margin: 0.95rem 0;
+        opacity: 0;
+        transform: translateY(8px);
+        animation: reveal 0.45s ease forwards;
+      }
+      @keyframes reveal {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .timeline-item::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        border: 2px solid #0f172a;
+        position: absolute;
+        left: -1.46rem;
+        top: 0.3rem;
+      }
+      .timeline-item .year {
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 0.84rem;
+      }
+      .timeline-item h3 {
+        margin: 0.2rem 0;
+        font-size: 0.98rem;
+      }
+      .timeline-item p {
+        margin: 0.15rem 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .timeline-item a {
+        color: #93c5fd;
+        font-size: 0.85rem;
+      }
+      .status {
+        margin-top: 0.7rem;
+        min-height: 1.2rem;
+        font-size: 0.9rem;
+      }
+      .status.error {
+        color: var(--danger);
+      }
+      .status.ok {
+        color: #93c5fd;
+      }
+      @media (max-width: 900px) {
+        .controls {
+          grid-template-columns: 1fr 1fr;
+        }
+        button {
+          grid-column: span 2;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Artículos conectados por temática en tiempo real</h1>
+        <p class="subtitle">
+          Busca un tema, define rango de años y cantidad de resultados. Verás cómo se conectan
+          y aparecen en vivo desde Internet (Wikipedia).
+        </p>
+      </header>
+
+      <section class="panel" aria-label="Controles">
+        <div class="controls">
+          <div class="field" style="grid-column: span 2">
+            <label for="topicInput">Tema o artículo base</label>
+            <input id="topicInput" type="text" value="Inteligencia artificial" />
+          </div>
+          <div class="field">
+            <label for="yearFrom">Año desde</label>
+            <input id="yearFrom" type="number" min="1800" max="2100" value="2018" />
+          </div>
+          <div class="field">
+            <label for="yearTo">Año hasta</label>
+            <input id="yearTo" type="number" min="1800" max="2100" value="2025" />
+          </div>
+          <div class="field">
+            <label for="resultLimit">Cantidad</label>
+            <select id="resultLimit">
+              <option value="5">5</option>
+              <option value="8" selected>8</option>
+              <option value="12">12</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+          <button id="connectBtn">Conectar en tiempo real</button>
+        </div>
+        <p id="feedback" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="layout" id="resultArea">
+        <article class="article-card" id="baseCard"></article>
+        <article class="article-card" id="relatedCard">
+          <h2>Conexiones por línea de tiempo</h2>
+          <div class="timeline" id="timeline"></div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const topicInput = document.getElementById("topicInput");
+      const yearFromInput = document.getElementById("yearFrom");
+      const yearToInput = document.getElementById("yearTo");
+      const resultLimitInput = document.getElementById("resultLimit");
+      const connectBtn = document.getElementById("connectBtn");
+      const feedback = document.getElementById("feedback");
+      const timeline = document.getElementById("timeline");
+      const baseCard = document.getElementById("baseCard");
+
+      const currentYear = new Date().getFullYear();
+
+      function readYearRange() {
+        const from = Number(yearFromInput.value);
+        const to = Number(yearToInput.value);
+
+        if (Number.isNaN(from) || Number.isNaN(to) || from > to) {
+          throw new Error("El rango de años es inválido. Asegúrate de que 'desde' sea menor o igual a 'hasta'.");
+        }
+
+        return { from, to };
+      }
+
+      function extractYear(text) {
+        const match = text.match(/\b(18\d{2}|19\d{2}|20\d{2}|2100)\b/);
+        if (!match) return null;
+        const year = Number(match[0]);
+        return year <= currentYear ? year : null;
+      }
+
+      function safeSnippet(htmlSnippet) {
+        const temp = document.createElement("div");
+        temp.innerHTML = htmlSnippet;
+        return temp.textContent?.trim() || "Sin resumen disponible.";
+      }
+
+      function renderBase(topic, range, limit) {
+        baseCard.innerHTML = `
+          <h2>Consulta base</h2>
+          <p><strong>${topic}</strong></p>
+          <p class="meta">Rango: ${range.from} - ${range.to} · Máximo: ${limit} artículos</p>
+          <p class="meta">Fuente: API pública de Wikipedia (Internet).</p>
+        `;
+      }
+
+      function appendTimelineItem(article, index) {
+        const item = document.createElement("div");
+        item.className = "timeline-item";
+        item.style.animationDelay = `${index * 70}ms`;
+        item.innerHTML = `
+          <span class="year">${article.year}</span>
+          <h3>${article.title}</h3>
+          <p>${article.snippet}</p>
+          <a href="${article.url}" target="_blank" rel="noopener noreferrer">Abrir artículo</a>
+        `;
+        timeline.appendChild(item);
+      }
+
+      async function fetchArticles(topic, limit) {
+        const endpoint = new URL("https://es.wikipedia.org/w/api.php");
+        endpoint.search = new URLSearchParams({
+          action: "query",
+          list: "search",
+          srsearch: topic,
+          srlimit: String(Math.min(50, limit * 3)),
+          format: "json",
+          origin: "*"
+        }).toString();
+
+        const response = await fetch(endpoint);
+        if (!response.ok) {
+          throw new Error("No se pudo consultar Wikipedia en este momento.");
+        }
+
+        const data = await response.json();
+        return (data.query?.search || []).map((entry) => ({
+          title: entry.title,
+          snippet: safeSnippet(entry.snippet),
+          year: extractYear(`${entry.title} ${entry.snippet}`),
+          url: `https://es.wikipedia.org/wiki/${encodeURIComponent(entry.title.replace(/\s+/g, "_"))}`
+        }));
+      }
+
+      function streamArticles(articles) {
+        return new Promise((resolve) => {
+          if (articles.length === 0) {
+            resolve();
+            return;
+          }
+
+          let i = 0;
+          const interval = setInterval(() => {
+            appendTimelineItem(articles[i], i);
+            i += 1;
+            feedback.textContent = `Conectando en tiempo real... ${i}/${articles.length}`;
+            feedback.className = "status ok";
+
+            if (i >= articles.length) {
+              clearInterval(interval);
+              feedback.textContent = `Conexión completada: ${articles.length} artículos enlazados.`;
+              resolve();
+            }
+          }, 350);
+        });
+      }
+
+      async function connectArticles() {
+        feedback.textContent = "";
+        feedback.className = "status";
+        timeline.innerHTML = "";
+
+        try {
+          const topic = topicInput.value.trim();
+          const limit = Number(resultLimitInput.value);
+
+          if (!topic) {
+            throw new Error("Escribe un tema o nombre de artículo para buscar conexiones.");
+          }
+
+          const range = readYearRange();
+          renderBase(topic, range, limit);
+
+          feedback.textContent = "Buscando artículos en Internet...";
+          feedback.className = "status ok";
+
+          const fetched = await fetchArticles(topic, limit);
+          const filtered = fetched
+            .filter((article) => article.year && article.year >= range.from && article.year <= range.to)
+            .sort((a, b) => a.year - b.year)
+            .slice(0, limit);
+
+          if (filtered.length === 0) {
+            feedback.textContent =
+              "No hubo resultados dentro del rango indicado. Prueba otro tema o amplía los años.";
+            feedback.className = "status error";
+            return;
+          }
+
+          await streamArticles(filtered);
+        } catch (error) {
+          feedback.textContent = error.message || "Ocurrió un error inesperado.";
+          feedback.className = "status error";
+        }
+      }
+
+      connectBtn.addEventListener("click", connectArticles);
+      connectArticles();
+    </script>
+  </body>
+</html>
