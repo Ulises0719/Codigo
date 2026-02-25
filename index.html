@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Conector de Artículos con Línea de Tiempo</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --card: #1f2937;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #60a5fa;
+        --accent-2: #34d399;
+        --danger: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at top, #1e293b, var(--bg) 60%);
+        min-height: 100vh;
+      }
+      .app {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(1.5rem, 3vw, 2.2rem);
+      }
+      .subtitle {
+        color: var(--muted);
+        margin-top: 0.4rem;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel), transparent 10%);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 14px;
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.75rem;
+      }
+      select,
+      button {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: #0b1220;
+        color: var(--text);
+        padding: 0.7rem 0.8rem;
+        font-size: 0.95rem;
+      }
+      button {
+        min-width: 180px;
+        cursor: pointer;
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+      .article-card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+      .article-card h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+      .meta {
+        margin-top: 0.5rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.8rem;
+      }
+      .tag {
+        background: rgba(96, 165, 250, 0.15);
+        color: #bfdbfe;
+        border: 1px solid rgba(96, 165, 250, 0.35);
+        border-radius: 999px;
+        padding: 0.2rem 0.6rem;
+        font-size: 0.8rem;
+      }
+      .timeline {
+        margin-top: 0.7rem;
+        border-left: 2px solid rgba(96, 165, 250, 0.4);
+        padding-left: 0.9rem;
+      }
+      .timeline-item {
+        position: relative;
+        margin: 0.9rem 0;
+      }
+      .timeline-item::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        border: 2px solid #0f172a;
+        position: absolute;
+        left: -1.46rem;
+        top: 0.3rem;
+      }
+      .timeline-item h3 {
+        margin: 0;
+        font-size: 0.98rem;
+      }
+      .timeline-item .year {
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 0.84rem;
+      }
+      .timeline-item p {
+        margin: 0.3rem 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .empty {
+        color: var(--danger);
+        margin-top: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Conector de artículos por temática y línea de tiempo</h1>
+        <p class="subtitle">
+          Selecciona un artículo base y explora artículos relacionados organizados en una
+          línea de tiempo temática.
+        </p>
+      </header>
+
+      <section class="panel" aria-label="Controles">
+        <div class="controls">
+          <label>
+            <span style="display: none">Artículo base</span>
+            <select id="baseArticle"></select>
+          </label>
+          <button id="analyzeBtn">Conectar artículos</button>
+        </div>
+        <p id="feedback" class="empty" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="layout" id="resultArea"></section>
+    </main>
+
+    <script>
+      const articles = [
+        {
+          id: 1,
+          title: "Historia de la IA generativa",
+          year: 2018,
+          summary: "Panorama de modelos generativos y su impacto en creatividad digital.",
+          themes: ["Inteligencia Artificial", "Innovación", "Educación"]
+        },
+        {
+          id: 2,
+          title: "Aplicaciones de IA en salud",
+          year: 2019,
+          summary: "Cómo los modelos predictivos ayudan en diagnóstico y prevención.",
+          themes: ["Inteligencia Artificial", "Salud"]
+        },
+        {
+          id: 3,
+          title: "Periodismo de datos y visualización",
+          year: 2017,
+          summary: "Buenas prácticas para contar historias con datos.",
+          themes: ["Periodismo", "Visualización", "Educación"]
+        },
+        {
+          id: 4,
+          title: "Ética de los algoritmos",
+          year: 2020,
+          summary: "Riesgos de sesgo y estrategias para auditorías responsables.",
+          themes: ["Inteligencia Artificial", "Ética", "Política Pública"]
+        },
+        {
+          id: 5,
+          title: "Regulación tecnológica en LATAM",
+          year: 2021,
+          summary: "Comparativa de marcos legales sobre plataformas y datos.",
+          themes: ["Política Pública", "Ética"]
+        },
+        {
+          id: 6,
+          title: "Aprendizaje adaptativo en aulas digitales",
+          year: 2022,
+          summary: "Plataformas educativas personalizadas para estudiantes.",
+          themes: ["Educación", "Inteligencia Artificial", "Innovación"]
+        }
+      ];
+
+      const articleSelect = document.getElementById("baseArticle");
+      const analyzeBtn = document.getElementById("analyzeBtn");
+      const resultArea = document.getElementById("resultArea");
+      const feedback = document.getElementById("feedback");
+
+      function seedSelect() {
+        articleSelect.innerHTML = articles
+          .map(
+            (article) =>
+              `<option value="${article.id}">${article.title} (${article.year})</option>`
+          )
+          .join("");
+      }
+
+      function findRelated(baseArticle) {
+        return articles
+          .filter((article) => article.id !== baseArticle.id)
+          .map((article) => {
+            const commonThemes = article.themes.filter((theme) =>
+              baseArticle.themes.includes(theme)
+            );
+            return { ...article, commonThemes };
+          })
+          .filter((article) => article.commonThemes.length > 0)
+          .sort((a, b) => a.year - b.year);
+      }
+
+      function render(baseArticle, relatedArticles) {
+        resultArea.innerHTML = "";
+        feedback.textContent = "";
+
+        const baseCard = document.createElement("article");
+        baseCard.className = "article-card";
+        baseCard.innerHTML = `
+          <h2>Artículo base</h2>
+          <p><strong>${baseArticle.title}</strong></p>
+          <p class="meta">${baseArticle.year} · ${baseArticle.summary}</p>
+          <div class="tags">${baseArticle.themes
+            .map((theme) => `<span class="tag">${theme}</span>`)
+            .join("")}</div>
+        `;
+
+        const relatedCard = document.createElement("article");
+        relatedCard.className = "article-card";
+
+        if (relatedArticles.length === 0) {
+          relatedCard.innerHTML = `
+            <h2>Artículos relacionados</h2>
+            <p class="meta">No se encontraron coincidencias temáticas.</p>
+          `;
+          feedback.textContent =
+            "No hay conexiones temáticas para este artículo. Prueba con otro.";
+        } else {
+          relatedCard.innerHTML = `
+            <h2>Conexiones por línea de tiempo</h2>
+            <div class="timeline">
+              ${relatedArticles
+                .map(
+                  (article) => `
+                    <div class="timeline-item">
+                      <span class="year">${article.year}</span>
+                      <h3>${article.title}</h3>
+                      <p>${article.summary}</p>
+                      <div class="tags">${article.commonThemes
+                        .map((theme) => `<span class="tag">${theme}</span>`)
+                        .join("")}</div>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+          `;
+        }
+
+        resultArea.append(baseCard, relatedCard);
+      }
+
+      analyzeBtn.addEventListener("click", () => {
+        const selectedId = Number(articleSelect.value);
+        const baseArticle = articles.find((article) => article.id === selectedId);
+
+        if (!baseArticle) {
+          feedback.textContent = "Selecciona un artículo válido.";
+          resultArea.innerHTML = "";
+          return;
+        }
+
+        const relatedArticles = findRelated(baseArticle);
+        render(baseArticle, relatedArticles);
+      });
+
+      seedSelect();
+      analyzeBtn.click();
+    </script>
+  </body>
+</html>
